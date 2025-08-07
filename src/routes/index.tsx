@@ -1,6 +1,4 @@
 import MapScreen from "../pages/map/MapScreen";
-// import LoginPage from "../pages/auth/loginPage";
-// import SignupPage from "../pages/auth/signupPage";
 import MainLayout from "../layouts/MainLayout";
 
 interface AppRoute {
@@ -10,17 +8,10 @@ interface AppRoute {
 }
 
 export const appRoutes: AppRoute[] = [
+  { path: "*", element: <div>Page not found</div> },
   {
     path: "/map",
     element: <MapScreen />,
     layout: MainLayout,
   },
-  // {
-  //   path: "/login",
-  //   element: <LoginPage />,
-  // },
-  // {
-  //   path: "/signup",
-  //   element: <SignupPage />,
-  // },
 ];
