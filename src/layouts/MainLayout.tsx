@@ -1,5 +1,7 @@
-import { Container, Box } from "@mui/material";
+import { Box } from "@mui/material";
 import type { ReactNode } from "react";
+import Header from "./Header";
+import Footer from "./Footer";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -8,7 +10,9 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#f9f9f9", py: 4 }}>
-      <Container maxWidth="xl">{children}</Container>
+      <Header />
+      {children}
+      <Footer />
     </Box>
   );
 }

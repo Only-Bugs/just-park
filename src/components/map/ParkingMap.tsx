@@ -1,19 +1,43 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { CircularProgress, Typography } from "@mui/material";
 import L from "leaflet";
+
 import { useParkingData } from "../../hooks/useParkingData";
-import type { ParkingSpot } from "../../types/parking";
 import { getMarkerColor } from "../../utils/parkingUtils";
+import type { ParkingMapProps } from "../../types/maps";
 
-type Props = {
-  onSelectSpot: (spot: ParkingSpot) => void;
-  showAvailableOnly: boolean;
-};
+export default function ParkingMap(props: ParkingMapProps) {
+  const center: [number, number] = [-37.8136, 144.9631];
 
-export default function ParkingMap({ onSelectSpot, showAvailableOnly }: Props) {
+  return (
+    <MapContainer
+      center={center}
+      zoom={15}
+      style={{ height: "100%", width: "100%" }}
+    >
+      <InnerMap {...props} />
+    </MapContainer>
+  );
+}
+
+// 🔽 Inner map component to safely use useMap()
+function InnerMap({
+  onSelectSpot,
+  showAvailableOnly,
+  searchLocation,
+}: ParkingMapProps) {
+  const map = useMap();
   const { data, loading, error } = useParkingData();
-  const center: [number, number] = [-37.8136, 144.9631]; // Melbourne CBD
+
+  useEffect(() => {
+    if (searchLocation) {
+      map.flyTo([searchLocation.lat, searchLocation.lng], 18, {
+        duration: 1.5,
+      });
+    }
+  }, [searchLocation, map]);
 
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">Error: {error}</Typography>;
@@ -23,11 +47,7 @@ export default function ParkingMap({ onSelectSpot, showAvailableOnly }: Props) {
     : data;
 
   return (
-    <MapContainer
-      center={center}
-      zoom={15}
-      style={{ height: "100%", width: "100vw" }}
-    >
+    <>
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -66,6 +86,6 @@ export default function ParkingMap({ onSelectSpot, showAvailableOnly }: Props) {
           </Popup>
         </Marker>
       ))}
-    </MapContainer>
+    </>
   );
 }
