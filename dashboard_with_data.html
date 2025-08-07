@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melbourne Commuter Data Insights - Professional Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=InterMelbourne Population Growth:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Professional Color Palette */
+            --primary-navy: #1e293b;
+            --secondary-teal: #0891b2;
+            --accent-teal: #06b6d4;
+            --neutral-50: #f8fafc;
+            --neutral-100: #f1f5f9;
+            --neutral-200: #e2e8f0;
+            --neutral-300: #cbd5e1;
+            --neutral-600: #475569;
+            --neutral-700: #334155;
+            --neutral-800: #1e293b;
+            --neutral-900: #0f172a;
+            --white: #ffffff;
+
+            /* Typography */
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-base: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 20px;
+            --font-size-2xl: 24px;
+            --font-size-3xl: 30px;
+            --font-size-4xl: 36px;
+
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-2xl: 48px;
+            --spacing-3xl: 64px;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+            /* Border Radius */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+        }
+
+        body {
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            color: var(--neutral-700);
+            background-color: var(--neutral-50);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* 12-Column Grid System */
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: var(--spacing-lg);
+        }
+
+        .col-1 {
+            grid-column: span 1;
+        }
+
+        .col-2 {
+            grid-column: span 2;
+        }
+
+        .col-3 {
+            grid-column: span 3;
+        }
+
+        .col-4 {
+            grid-column: span 4;
+        }
+
+        .col-6 {
+            grid-column: span 6;
+        }
+
+        .col-8 {
+            grid-column: span 8;
+        }
+
+        .col-12 {
+            grid-column: span 12;
+        }
+
+        @media (max-width: 768px) {
+
+            .col-3,
+            .col-4,
+            .col-6,
+            .col-8 {
+                grid-column: span 12;
+            }
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--primary-navy);
+            color: var(--white);
+            padding: var(--spacing-2xl) 0;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .header h1 {
+            font-size: var(--font-size-4xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+            color: var(--white);
+        }
+
+        .header p {
+            font-size: var(--font-size-lg);
+            color: var(--neutral-200);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-lg);
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: var(--font-size-2xl);
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--neutral-300);
+            margin-top: var(--spacing-xs);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Section Spacing */
+        .section {
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .section-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 600;
+            color: var(--primary-navy);
+            margin-bottom: var(--spacing-xl);
+            text-align: center;
+        }
+
+        /* Metric Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .metric-card {
+            background: var(--white);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid var(--neutral-200);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .metric-icon {
+            font-size: 2.5rem;
+            margin-bottom: var(--spacing-md);
+            display: block;
+        }
+
+        .metric-value {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            color: var(--secondary-teal);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .metric-label {
+            font-size: var(--font-size-sm);
+            color: var(--neutral-600);
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .metric-trend {
+            font-size: var(--font-size-xs);
+            color: var(--neutral-500);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+        }
+
+        .trend-up {
+            color: #059669;
+        }
+
+        .trend-down {
+            color: #dc2626;
+        }
+
+        /* Chart Containers */
+        .chart-container {
+            background: var(--white);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--neutral-200);
+            transition: all 0.3s ease;
+        }
+
+        .chart-container:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .chart-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--primary-navy);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .chart-wrapper canvas {
+            max-height: 100%;
+        }
+
+
+
+        /* Insights Section */
+        .insights-section {
+            background: var(--neutral-100);
+            padding: var(--spacing-2xl);
+            border-radius: var(--radius-lg);
+            margin-top: var(--spacing-2xl);
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-lg);
+        }
+        
+        @media (max-width: 1024px) {
+            .insights-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .insight-card {
+            background: var(--white);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid var(--secondary-teal);
+            transition: all 0.3s ease;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .insight-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .insight-icon {
+            font-size: 1.5rem;
+        }
+
+        .insight-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--primary-navy);
+        }
+
+        .insight-content {
+            color: var(--neutral-600);
+            line-height: 1.6;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-3xl);
+            color: var(--neutral-500);
+            font-size: var(--font-size-lg);
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus States */
+        *:focus {
+            outline: 2px solid var(--secondary-teal);
+            outline-offset: 2px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 0 var(--spacing-md);
+            }
+
+            .header h1 {
+                font-size: var(--font-size-3xl);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header Section -->
+    <header class="header">
+        <div class="container">
+            <h1>Melbourne Commuter Data Insights</h1>
+            <p>Data insights into Melbourne's growth trends and their impact on urban infrastructure</p>
+
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-value" id="dataPoints">265</span>
+                    <div class="stat-label">Data Points</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">7</span>
+                    <div class="stat-label">Years Analyzed</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="lastUpdated">Aug 7</span>
+                    <div class="stat-label">Last Updated</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">259</span>
+                    <div class="stat-label">Zones Analyzed</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Key Metrics Section -->
+        <section class="section">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-icon">👥</span>
+                    <div class="metric-value" id="populationGrowth">+376K</div>
+                    <div class="metric-label">Population Growth (2015-2021)</div>
+                    <div class="metric-trend trend-up">
+                        <span>↗</span>
+                        <span id="populationTrendText">8.8% total growth</span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-icon">📈</span>
+                    <div class="metric-value" id="annualGrowth">+63K</div>
+                    <div class="metric-label">Average Annual Growth</div>
+                    <div class="metric-trend">
+                        <span>📊</span>
+                        <span>New residents per year</span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-icon">📈<//span>
+                    <div class="metric-value">2.89%</div>
+                    <div class="metric-label">Peak Growth Rate (2015-2016)</div>
+                    <div class="metric-trend trend-up">
+                        <span>📈</span>
+                        <span>Highest annual increase</span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-icon">📉</span>
+                    <div class="metric-value">-1.64%</div>
+                    <div class="metric-label">COVID Impact (2020-2021)</div>
+                    <div class="metric-trend trend-down">
+                        <span>⬇️</span>
+                        <span>Population decline</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Visualizations Section -->
+        <section class="section">
+            <h2 class="section-title">Data Visualizations</h2>
+
+            <div class="grid">
+                <!-- Population Growth Chart -->
+                <div class="col-6">
+                    <div class="chart-container">
+                        <div class="chart-title">
+                            <span>📈</span>
+                            <span>Population Growth Trends</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="populationChart" aria-label="Population growth trends chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Infrastructure Impact Chart -->
+                <div class="col-6">
+                    <div class="chart-container">
+                        <div class="chart-title">
+                            <span>📈</sppan>
+                                <span>Melbourne Population Growth (Actual Numbers)</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="populationNumbersChart" aria-label="Melbourne population actual numbers chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Year-over-Year Comparison -->
+                <div class="col-6">
+                    <div class="chart-container">
+                        <div class="chart-title">
+                            <span>📊</span>
+                            <span>How Many New People Each Year?</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="simpleGrowthChart"
+                                aria-label="Simple population growth chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COVID Impact Analysis -->
+                <div class="col-6">
+                    <div class="chart-container">
+                        <div class="chart-title">
+                            <span>🎯</span>
+                            <span>COVID-19 Impact Analysis</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="covidChart" aria-label="COVID-19 impact on population chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Insights Section -->
+        <section class="insights-section">
+            <h2 class="section-title">Commuter Insights & Recommendations</h2>
+            <div id="insights">
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <div class="insight-header">
+                            <span class="insight-icon">📈</span>
+                            <span class="insight-title">Population Growth Impact</span>
+                        </div>
+                        <div class="insight-content">Melbourne metropolitan area grew by 376K people from 2015-2021,
+                            averaging 63K new residents annually. With current parking infrastructure unchanged, this
+                            means <strong>17% more potential drivers</strong> competing for the same parking spaces,
+                            directly contributing to the average <strong>17 hours per year</strong> Melbourne drivers
+                            spend searching for parking.</div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-header">
+                            <span class="insight-icon">🏗️</span>
+                            <span class="insight-title">Data-Driven Understanding</span>
+                        </div>
+                        <div class="insight-content">Melbourne's population growth shows clear patterns: peak growth of 2.89% in 2015-2016, followed by gradual decline to 1.09% in 2019-2020, and a COVID-induced decline of -1.64% in 2020-2021. These <strong>data insights</strong> help commuters understand the root causes of urban congestion challenges.</div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-header">
+                            <span class="insight-icon">💡</span>
+                            <span class="insight-title">Smart Commuting Strategies</span>
+                        </div>
+                        <div class="insight-content">Consider public transport, off-peak travel, or carpooling to reduce
+                            individual parking demand. Increased population density makes public transport more
+                            efficient and cost-effective for daily commuting.</div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-header">
+                            <span class="insight-icon">🏙️</span>
+                            <span class="insight-title">COVID-19 Impact Analysis</span>
+                        </div>
+                        <div class="insight-content">Population declined in 2020-2021, but as noted in recent studies,
+                            <strong>Melbourne has become more dependent on car travel since COVID</strong> compared with
+                            similar cities. Infrastructure pressure will intensify as post-pandemic recovery continues
+                            and people return to CBD workplaces with increased car dependency.
+                        </div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-header">
+                            <span class="insight-icon">🎯</span>
+                            <span class="insight-title">Infrastructure Recommendations</span>
+                        </div>
+                        <div class="insight-content">With 8.8% population growth over 6 years, Melbourne needs adaptive
+                            infrastructure solutions. Flexible work arrangements and improved public transport can help
+                            manage congestion effectively.</div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-header">
+                            <span class="insight-icon">🌟</span>
+                            <span class="insight-title">Community Impact & Action</span>
+                        </div>
+                        <div class="insight-content">Melbourne commuters spend an average of <strong>17 hours per year</strong> searching for parking. Understanding these growth trends helps make informed decisions that benefit both individual convenience and community-wide congestion reduction. Every choice matters in urban mobility.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Embedded data - no need to load from external files
+        const summaryData = {
+            "analysis_date": "2025-08-07T11:44:42.914994",
+            "population_growth_2015_2021": 375567.0,
+            "avg_annual_growth": 62594.5,
+            "parking_zones_analyzed": 259,
+            "high_demand_zones": 77
+        };
+
+        const populationGrowthData = [
+            { Period: "2015-2016", Previous_Population: "4289391.0", Current_Population: "4413357.0", Growth_Absolute: "123966.0", Growth_Rate_Percent: "2.8900606169966787" },
+            { Period: "2016-2017", Previous_Population: "4413357.0", Current_Population: "4513462.0", Growth_Absolute: "100105.0", Growth_Rate_Percent: "2.2682280178104786" },
+            { Period: "2017-2018", Previous_Population: "4513462.0", Current_Population: "4605306.0", Growth_Absolute: "91844.0", Growth_Rate_Percent: "2.0348902904245123" },
+            { Period: "2018-2019", Previous_Population: "4605306.0", Current_Population: "4691704.0", Growth_Absolute: "86398.0", Growth_Rate_Percent: "1.8760534044860426" },
+            { Period: "2019-2020", Previous_Population: "4691704.0", Current_Population: "4742942.0", Growth_Absolute: "51238.0", Growth_Rate_Percent: "1.0920978817077975" },
+            { Period: "2020-2021", Previous_Population: "4742942.0", Current_Population: "4664958.0", Growth_Absolute: "-77984.0", Growth_Rate_Percent: "-1.6442115463355869" }
+        ];
+
+        const parkingZonesData = [
+            { Zone_Number: "7458.0", Occupancy_Rate_Percent: "100.0", Total_Readings: "4" },
+            { Zone_Number: "7428.0", Occupancy_Rate_Percent: "100.0", Total_Readings: "2" },
+            { Zone_Number: "7591.0", Occupancy_Rate_Percent: "100.0", Total_Readings: "1" },
+            { Zone_Number: "7708.0", Occupancy_Rate_Percent: "95.24", Total_Readings: "21" },
+            { Zone_Number: "7239.0", Occupancy_Rate_Percent: "94.12", Total_Readings: "17" },
+            { Zone_Number: "7556.0", Occupancy_Rate_Percent: "93.94", Total_Readings: "33" },
+            { Zone_Number: "7570.0", Occupancy_Rate_Percent: "86.49", Total_Readings: "37" },
+            { Zone_Number: "7571.0", Occupancy_Rate_Percent: "76.47", Total_Readings: "34" },
+            { Zone_Number: "7721.0", Occupancy_Rate_Percent: "42.22", Total_Readings: "45" },
+            { Zone_Number: "7566.0", Occupancy_Rate_Percent: "37.5", Total_Readings: "48" },
+            { Zone_Number: "7247.0", Occupancy_Rate_Percent: "43.75", Total_Readings: "32" },
+            { Zone_Number: "7923.0", Occupancy_Rate_Percent: "57.14", Total_Readings: "35" },
+            { Zone_Number: "7981.0", Occupancy_Rate_Percent: "13.33", Total_Readings: "30" },
+            { Zone_Number: "7084.0", Occupancy_Rate_Percent: "33.33", Total_Readings: "27" },
+            { Zone_Number: "7716.0", Occupancy_Rate_Percent: "50.0", Total_Readings: "26" }
+        ];
+
+        // Professional Dashboard JavaScript
+        class ProfessionalDashboard {
+            constructor() {
+                this.charts = {};
+                console.log('Dashboard initializing...');
+                console.log('Population data:', populationGrowthData);
+                console.log('Parking data:', parkingZonesData);
+                this.initializeDashboard();
+            }
+
+            initializeDashboard() {
+                try {
+                    console.log('Creating charts...');
+                    // Create all charts with embedded data
+                    this.createPopulationChart(populationGrowthData);
+                    this.createPopulationNumbersChart(populationGrowthData);
+                    this.createSimpleGrowthChart(populationGrowthData);
+                    this.createCovidChart(populationGrowthData);
+                    console.log('All charts created successfully');
+                } catch (error) {
+                    console.error('Error initializing dashboard:', error);
+                }
+            }
+
+            createPopulationChart(data) {
+                console.log('Creating population chart with data:', data);
+                const canvas = document.getElementById('populationChart');
+                if (!canvas) {
+                    console.error('Population chart canvas not found');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+
+                try {
+                    this.charts.population = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.map(d => d.Period),
+                            datasets: [{
+                                label: 'Growth Rate (%)',
+                                data: data.map(d => parseFloat(d.Growth_Rate_Percent)),
+                                borderColor: '#0891b2',
+                                backgroundColor: 'rgba(8, 145, 178, 0.1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: '#0891b2',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Growth Rate (%)'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Time Period'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    console.log('Population chart created successfully');
+                } catch (error) {
+                    console.error('Error creating population chart:', error);
+                }
+            }
+
+            createPopulationNumbersChart(data) {
+                console.log('Creating population numbers chart...');
+                const canvas = document.getElementById('populationNumbersChart');
+                if (!canvas) {
+                    console.error('Population numbers chart canvas not found');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+
+                try {
+                    // Show actual population numbers over time
+                    const years = data.map(d => d.Period.split('-')[1]); // Get end year
+                    const populationNumbers = data.map(d => parseFloat(d.Current_Population) / 1000000); // Convert to millions
+
+                    this.charts.populationNumbers = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: years,
+                            datasets: [{
+                                label: 'Melbourne Population (Millions)',
+                                data: populationNumbers,
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                borderWidth: 3,
+                                pointBackgroundColor: '#10b981',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2,
+                                pointRadius: 6,
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    title: {
+                                        display: true,
+                                        text: 'Population (Millions)'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Year'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    console.log('Population numbers chart created successfully');
+                } catch (error) {
+                    console.error('Error creating population numbers chart:', error);
+                }
+            }
+
+            createSimpleGrowthChart(data) {
+                console.log('Creating simple growth chart...');
+                const canvas = document.getElementById('simpleGrowthChart');
+                if (!canvas) {
+                    console.error('Simple growth chart canvas not found');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+
+                try {
+                    // Simple bar chart showing new people each year
+                    const years = data.map(d => d.Period.split('-')[1]); // Get end year
+                    const newPeople = data.map(d => parseFloat(d.Growth_Absolute) / 1000); // Convert to thousands
+
+                    this.charts.simpleGrowth = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: years,
+                            datasets: [{
+                                label: 'New People (thousands)',
+                                data: newPeople,
+                                backgroundColor: newPeople.map(value => 
+                                    value > 0 ? '#10b981' : '#ef4444'
+                                ),
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'New People (thousands)'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Year'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    console.log('Simple growth chart created successfully');
+                } catch (error) {
+                    console.error('Error creating simple growth chart:', error);
+                }
+            }
+
+            createCovidChart(data) {
+                console.log('Creating COVID chart...');
+                const canvas = document.getElementById('covidChart');
+                if (!canvas) {
+                    console.error('COVID chart canvas not found');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+
+                try {
+                    const covidData = data.filter(d =>
+                        d.Period.includes('2019') || d.Period.includes('2020') || d.Period.includes('2021')
+                    );
+
+                    this.charts.covid = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Pre-COVID Growth', 'COVID Impact', 'Recovery Period'],
+                            datasets: [{
+                                data: [
+                                    Math.abs(parseFloat(covidData[0]?.Growth_Absolute || 0)),
+                                    Math.abs(parseFloat(covidData[1]?.Growth_Absolute || 0)),
+                                    Math.abs(parseFloat(covidData[2]?.Growth_Absolute || 0))
+                                ],
+                                backgroundColor: [
+                                    '#10b981',
+                                    '#ef4444',
+                                    '#f59e0b'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                    console.log('COVID chart created successfully');
+                } catch (error) {
+                    console.error('Error creating COVID chart:', error);
+                }
+            }
+
+
+        }
+
+        // Initialize dashboard when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, Chart.js available:', typeof Chart !== 'undefined');
+
+            // Test if all required elements exist
+            const requiredElements = ['populationChart', 'populationNumbersChart', 'simpleGrowthChart', 'covidChart'];
+            requiredElements.forEach(id => {
+                const element = document.getElementById(id);
+                console.log(`Element ${id}:`, element ? 'found' : 'NOT FOUND');
+            });
+
+            if (typeof Chart !== 'undefined') {
+                new ProfessionalDashboard();
+            } else {
+                console.error('Chart.js not loaded properly');
+                document.getElementById('insights').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <h3>⚠️ Chart.js Loading Error</h3>
+                        <p>Please check your internet connection and refresh the page.</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+
+</html>
