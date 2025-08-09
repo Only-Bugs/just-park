@@ -1,17 +1,17 @@
 export default {
   hero: {
     position: "relative",
-    height: "70vh",
+    height: "100%",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     textAlign: "center",
-    px: 2,
     backgroundImage: `url("/images/parking-hero.jpg")`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundRepeat: "no-repeat",
     overflow: "hidden",
+    px: 0,
   },
   overlay: {
     position: "absolute",

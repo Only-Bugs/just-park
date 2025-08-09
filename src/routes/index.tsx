@@ -1,5 +1,6 @@
 import MapScreen from "../pages/map/MapScreen";
 import MainLayout from "../layouts/MainLayout";
+import NotFoundPage from "../pages/notfound/NotFoundPage";
 
 interface AppRoute {
   path: string;
@@ -8,7 +9,7 @@ interface AppRoute {
 }
 
 export const appRoutes: AppRoute[] = [
-  { path: "*", element: <div>Page not found</div> },
+  { path: "*", element: <NotFoundPage /> },
   {
     path: "/map",
     element: <MapScreen />,
