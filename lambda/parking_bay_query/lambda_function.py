@@ -1,5 +1,6 @@
 import pymysql
 import json
+from collections import defaultdict
 
 # Configuration
 endpoint = 'parking-db-prod.cziu20u0uide.ap-southeast-2.rds.amazonaws.com'
@@ -31,22 +32,29 @@ def lambda_handler(event, context):
     """
     cursor.execute(query)
 
-    # Form json by result
     result = cursor.fetchall()
-    table_data = []
+
+    # Group by KerbsideID
+    grouped = {}
     for row in result:
-        table_data.append({
-            'Lastupdated': row[0], 
-            'Status_Timestamp': row[1], 
-            'Zone_Number': row[2], 
-            'Status_Description': row[3], 
-            'KerbsideID': row[4], 
-            'Location': row[5],
+        kerb_id = row[4]
+        restriction = {
             'Days': row[6],
             'Start_Time': row[7],
             'End_Time': row[8],
             'Rule': row[9]
-        })
+        }
+        if kerb_id not in grouped:
+            grouped[kerb_id] = {
+                'Lastupdated': row[0],
+                'Status_Timestamp': row[1],
+                'Zone_Number': row[2],
+                'Status_Description': row[3],
+                'KerbsideID': row[4],
+                'Location': row[5],
+                'Restrictions': []
+            }
+        grouped[kerb_id]['Restrictions'].append(restriction)
 
     cursor.close()
     connection.close()
@@ -60,5 +68,5 @@ def lambda_handler(event, context):
             'Access-Control-Allow-Methods': 'GET',
             'Access-Control-Allow-Headers': 'Content-Type'
         },
-        'body': table_data
+        'body': list(grouped.values())
     }

@@ -11,6 +11,8 @@ def lambda_handler(event, context):
     connection = None
     cursor = None
     total_processed = 0
+    records_updated = 0
+    records_not_found = 0
     
     try:
         # Connect to database
@@ -33,69 +35,78 @@ def lambda_handler(event, context):
                 
                 print(f"Processing {len(parking_records)} records from SQS")
                 
-                # Insert each parking record
+                # Update each parking record
                 for row in parking_records:
                     # Debug: print the row structure
                     print(f"Row structure: {row}")
                     
-                    # Extract values and convert to strings/None
+                    # Extract values - note the field name differences
                     lastupdated = row.get("lastupdated")
-                    status_time = row.get("status_time") 
+                    status_time = row.get("status_timestamp")  # Note: status_timestamp in incoming data
                     zone_number = row.get("zone_number")
                     status_description = row.get("status_description")
-                    bay_id = row.get("bay_id")
-                    location = row.get("location")
+                    bay_id = row.get("kerbsideid")  # Note: kerbsideid in incoming data
+                    location_data = row.get("location")
                     
-                    # Handle location if it's a dict (common in APIs)
-                    if isinstance(location, dict):
-                        location = json.dumps(location)  # Convert dict to JSON string
+                    # Convert location from {"lon": x, "lat": y} to "lat, lon" string format
+                    location_string = None
+                    if isinstance(location_data, dict) and 'lat' in location_data and 'lon' in location_data:
+                        # Format as "lat, lon" to match your DB format
+                        location_string = f"{location_data['lat']}, {location_data['lon']}"
+                    elif location_data:
+                        # Fallback: convert whatever format to string
+                        location_string = str(location_data)
                     
-                    # Handle any other potential dict values
-                    if isinstance(lastupdated, dict):
-                        lastupdated = str(lastupdated)
-                    if isinstance(status_time, dict):
-                        status_time = str(status_time)
-                    if isinstance(status_description, dict):
-                        status_description = str(status_description)
+                    print(f"Updating: bay_id={bay_id}, zone={zone_number}, status={status_description}, location={location_string}")
                     
-                    print(f"Inserting: bay_id={bay_id}, zone={zone_number}, status={status_description}")
-                    
+                    # UPDATE only existing records - do not insert new ones
                     cursor.execute("""
-                        INSERT INTO staging_parking_sensors 
-                        (Lastupdated, Status_Timestamp, Zone_Number, Status_Description, KerbsideID, Location)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                            Lastupdated = VALUES(Lastupdated),
-                            Status_Timestamp = VALUES(Status_Timestamp),
-                            Status_Description = VALUES(Status_Description),
-                            Location = VALUES(Location)
+                        UPDATE staging_parking_sensors 
+                        SET 
+                            Lastupdated = %s,
+                            Status_Timestamp = %s,
+                            Zone_Number = %s,
+                            Status_Description = %s,
+                            Location = %s
+                        WHERE KerbsideID = %s
                     """, (
                         lastupdated,
                         status_time,
                         zone_number,
                         status_description,
-                        bay_id,
-                        location
+                        location_string,
+                        bay_id
                     ))
+                    
+                    # Check if any rows were actually updated
+                    if cursor.rowcount > 0:
+                        records_updated += 1
+                        print(f"Successfully updated KerbsideID {bay_id}")
+                    else:
+                        records_not_found += 1
+                        print(f"No existing record found for KerbsideID {bay_id}")
+                    
                     total_processed += 1
                 
                 # Commit after each SQS message
                 connection.commit()
-                print(f"Committed {len(parking_records)} records")
-                
-                # Verify insertion with a count query
-                cursor.execute("SELECT COUNT(*) FROM staging_parking_sensors")
-                total_count = cursor.fetchone()[0]
-                print(f"Total records in database: {total_count}")
+                print(f"Committed updates for {len(parking_records)} records")
                 
             except Exception as e:
                 print(f"Error processing SQS record: {str(e)}")
                 connection.rollback()
                 raise e
         
+        # Final summary
+        print(f"Summary: {total_processed} processed, {records_updated} updated, {records_not_found} not found")
+        
         return {
             "statusCode": 200,
-            "body": json.dumps(f"Processed {total_processed} records")
+            "body": json.dumps({
+                "message": f"Processed {total_processed} records",
+                "updated": records_updated,
+                "not_found": records_not_found
+            })
         }
         
     except Exception as e:
