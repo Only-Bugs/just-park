@@ -15,7 +15,7 @@ def lambda_handler(event, context):
     records_not_found = 0
     
     try:
-        # Connect to database
+        # Connection
         connection = pymysql.connect(
             host=endpoint,
             user=username,
@@ -33,33 +33,24 @@ def lambda_handler(event, context):
                 message_body = json.loads(record['body'])
                 parking_records = message_body['records']
                 
-                print(f"Processing {len(parking_records)} records from SQS")
-                
                 # Update each parking record
                 for row in parking_records:
-                    # Debug: print the row structure
-                    print(f"Row structure: {row}")
-                    
-                    # Extract values - note the field name differences
+                    # Extract values
                     lastupdated = row.get("lastupdated")
-                    status_time = row.get("status_timestamp")  # Note: status_timestamp in incoming data
+                    status_time = row.get("status_timestamp")
                     zone_number = row.get("zone_number")
                     status_description = row.get("status_description")
-                    bay_id = row.get("kerbsideid")  # Note: kerbsideid in incoming data
+                    bay_id = row.get("kerbsideid")
                     location_data = row.get("location")
                     
                     # Convert location from {"lon": x, "lat": y} to "lat, lon" string format
                     location_string = None
                     if isinstance(location_data, dict) and 'lat' in location_data and 'lon' in location_data:
-                        # Format as "lat, lon" to match your DB format
                         location_string = f"{location_data['lat']}, {location_data['lon']}"
                     elif location_data:
-                        # Fallback: convert whatever format to string
                         location_string = str(location_data)
                     
-                    print(f"Updating: bay_id={bay_id}, zone={zone_number}, status={status_description}, location={location_string}")
-                    
-                    # UPDATE only existing records - do not insert new ones
+                    # Update record
                     cursor.execute("""
                         UPDATE staging_parking_sensors 
                         SET 
@@ -78,7 +69,7 @@ def lambda_handler(event, context):
                         bay_id
                     ))
                     
-                    # Check if any rows were actually updated
+                    # Checker
                     if cursor.rowcount > 0:
                         records_updated += 1
                         print(f"Successfully updated KerbsideID {bay_id}")
@@ -97,7 +88,7 @@ def lambda_handler(event, context):
                 connection.rollback()
                 raise e
         
-        # Final summary
+        # Summary
         print(f"Summary: {total_processed} processed, {records_updated} updated, {records_not_found} not found")
         
         return {
