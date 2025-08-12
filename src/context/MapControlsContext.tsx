@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import type { ParkingSpot } from "../types/parking";
 import { useParkingSpots } from "../hooks/useParkingSpots";
+
 interface MapControlsContextType {
   spots: ParkingSpot[];
   loading: boolean;
@@ -14,12 +15,16 @@ interface MapControlsContextType {
   setSearchLocation: (location: { lat: number; lng: number } | null) => void;
   filteredSpots: ParkingSpot[];
 }
-const MapControlsContext = createContext<MapControlsContextType | undefined>(
-  undefined
-);
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const MapControlsContext = createContext<
+  MapControlsContextType | undefined
+>(undefined);
+
 interface MapControlsProviderProps {
   children: ReactNode;
 }
+
 export function MapControlsProvider({ children }: MapControlsProviderProps) {
   const {
     spots,
@@ -28,19 +33,25 @@ export function MapControlsProvider({ children }: MapControlsProviderProps) {
     lastUpdated,
     refresh: originalRefresh,
   } = useParkingSpots();
-  const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+
+  // Set default to true for "available only"
+  const [showAvailableOnly, setShowAvailableOnly] = useState(true);
   const [searchLocation, setSearchLocation] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
   const filteredSpots = showAvailableOnly
     ? spots.filter((spot) => spot.status === "Unoccupied")
     : spots;
+
   const findDensestArea = useCallback((spotsArray: ParkingSpot[]) => {
     if (spotsArray.length === 0) return null;
+
     const gridSize = 0.002;
     const grid: { [key: string]: ParkingSpot[] } = {};
+
     spotsArray.forEach((spot) => {
       const gridX = Math.floor(spot.lat / gridSize);
       const gridY = Math.floor(spot.lng / gridSize);
@@ -50,6 +61,7 @@ export function MapControlsProvider({ children }: MapControlsProviderProps) {
       }
       grid[key].push(spot);
     });
+
     let maxCount = 0;
     let densestCell = "";
     Object.entries(grid).forEach(([key, cellSpots]) => {
@@ -58,18 +70,22 @@ export function MapControlsProvider({ children }: MapControlsProviderProps) {
         densestCell = key;
       }
     });
+
     if (!densestCell) return null;
+
     const cellSpots = grid[densestCell];
     const avgLat =
       cellSpots.reduce((sum, spot) => sum + spot.lat, 0) / cellSpots.length;
     const avgLng =
       cellSpots.reduce((sum, spot) => sum + spot.lng, 0) / cellSpots.length;
+
     return {
       lat: avgLat,
       lng: avgLng,
       count: maxCount,
     };
   }, []);
+
   const refresh = useCallback(async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
@@ -94,6 +110,7 @@ export function MapControlsProvider({ children }: MapControlsProviderProps) {
     findDensestArea,
     isRefreshing,
   ]);
+
   const value: MapControlsContextType = {
     spots,
     loading,
@@ -106,12 +123,14 @@ export function MapControlsProvider({ children }: MapControlsProviderProps) {
     setSearchLocation,
     filteredSpots,
   };
+
   return (
     <MapControlsContext.Provider value={value}>
       {children}
     </MapControlsContext.Provider>
   );
 }
+
 // eslint-disable-next-line react-refresh/only-export-components
 export function useMapControls() {
   const context = useContext(MapControlsContext);

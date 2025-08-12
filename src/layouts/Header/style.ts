@@ -41,8 +41,13 @@ export default {
     cursor: "pointer",
     fontWeight: 500,
     color: "#555",
+    textDecoration: "none",
     "&:hover": {
       color: "#1976d2",
     },
+  },
+  activeLink: {
+    color: "#1976d2",
+    fontWeight: 700,
   },
 };

@@ -2,7 +2,8 @@
 import type { ParkingBayApiResponse, ParkingSpot } from "../types/parking";
 import { transformApiResponse } from "../types/parking";
 
-const API_URL = "/api/dev/parkingbay";
+const API_URL =
+  "https://rbwqhumr48.execute-api.ap-southeast-2.amazonaws.com/dev/parkingbay";
 
 export interface FetchParkingDataOptions {
   timeout?: number;
@@ -30,12 +31,18 @@ function isValidParkingRecord(
   }
 
   const r = record as any;
-  return (
+
+  // Check basic required fields
+  const hasBasicFields =
     typeof r.Location === "string" &&
     r.Location.includes(",") &&
     r.KerbsideID &&
-    r.Status_Description
-  );
+    r.Status_Description;
+
+  // Restrictions array is optional but should be an array if present
+  const hasValidRestrictions = !r.Restrictions || Array.isArray(r.Restrictions);
+
+  return hasBasicFields && hasValidRestrictions;
 }
 
 /**
@@ -85,8 +92,14 @@ export async function fetchParkingData(
     const validRecords = rawData.filter(isValidParkingRecord);
     const validRecordsCount = validRecords.length;
 
-    // Transform to internal format
-    const transformedData = validRecords.map(transformApiResponse);
+    console.log(
+      `Processing ${totalRecords} total records, ${validRecordsCount} valid records`
+    );
+
+    // Transform to internal format, filtering out null results
+    const transformedData = validRecords
+      .map(transformApiResponse)
+      .filter((spot): spot is ParkingSpot => spot !== null);
 
     // Remove duplicates based on ID (keep the most recent one)
     const uniqueData = transformedData.reduce((acc, spot) => {
@@ -113,6 +126,15 @@ export async function fetchParkingData(
     }, [] as ParkingSpot[]);
 
     const duration = Date.now() - startTime;
+
+    console.log(
+      `Fetch completed in ${duration}ms. Final count: ${uniqueData.length} unique spots`
+    );
+
+    // Log sample transformed record for debugging
+    if (uniqueData.length > 0) {
+      console.log("Sample transformed record:", uniqueData[0]);
+    }
 
     return {
       success: true,
@@ -152,6 +174,11 @@ export async function fetchParkingData(
 export async function fetchParkingDataWithStats(): Promise<void> {
   const result = await fetchParkingData();
 
+  console.log("=== PARKING DATA FETCH STATS ===");
+  console.log(`Total records: ${result.totalRecords}`);
+  console.log(`Valid records: ${result.validRecords}`);
+  console.log(`Final processed: ${result.data.length}`);
+
   if (result.error) {
     console.log(`Error: ${result.error}`);
   }
@@ -166,5 +193,50 @@ export async function fetchParkingDataWithStats(): Promise<void> {
     Object.entries(statusCounts).forEach(([status, count]) => {
       console.log(`  ${status}: ${count}`);
     });
+
+    // Log restriction analysis
+    const restrictionStats = result.data.reduce(
+      (acc, spot) => {
+        const restrictionCount = spot.restrictions?.length || 0;
+        acc.totalRestrictions += restrictionCount;
+        if (restrictionCount > 0) {
+          acc.spotsWithRestrictions++;
+        }
+
+        // Count rule types
+        spot.restrictions?.forEach((restriction) => {
+          acc.ruleTypes[restriction.Rule] =
+            (acc.ruleTypes[restriction.Rule] || 0) + 1;
+        });
+
+        return acc;
+      },
+      {
+        totalRestrictions: 0,
+        spotsWithRestrictions: 0,
+        ruleTypes: {} as Record<string, number>,
+      }
+    );
+
+    console.log("\nRestriction Analysis:");
+    console.log(
+      `  Spots with restrictions: ${restrictionStats.spotsWithRestrictions}/${result.data.length}`
+    );
+    console.log(`  Total restrictions: ${restrictionStats.totalRestrictions}`);
+    console.log(
+      `  Average restrictions per spot: ${(
+        restrictionStats.totalRestrictions / result.data.length
+      ).toFixed(2)}`
+    );
+
+    console.log("\nRule Types:");
+    Object.entries(restrictionStats.ruleTypes)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10) // Top 10 most common rules
+      .forEach(([rule, count]) => {
+        console.log(`  ${rule}: ${count}`);
+      });
   }
+
+  console.log("=== END STATS ===");
 }

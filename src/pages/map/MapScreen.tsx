@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Box,
   Fab,
@@ -6,21 +6,21 @@ import {
   Typography,
   Alert,
   Button,
-  Paper,
-  IconButton,
-  Slide,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import CloseIcon from "@mui/icons-material/Close";
+import L from "leaflet";
 import ParkingMap from "../../components/map/ParkingMap";
 import HeroSection from "../../components/home/HeroSection";
-import LocationSearchBar from "../../components/forms/search/LocationSearchBar";
-import ParkingResultsList from "../../components/map/ParkingResultsList";
+import SearchOverlay from "../../components/map/SearchOverlay";
 import { useMapControls } from "../../context/MapControlsContext";
 import type { ParkingSpot } from "../../types/parking";
 import styles from "./styles";
+
 type MapMode = "browse" | "searching" | "spotSelected";
+
 export default function MapScreen() {
   const {
     loading,
@@ -30,73 +30,117 @@ export default function MapScreen() {
     searchLocation,
     setSearchLocation,
   } = useMapControls();
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [visibleSpots, setVisibleSpots] = useState<ParkingSpot[]>([]);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [mode, setMode] = useState<MapMode>("browse");
-  const [activeSpot, setActiveSpot] = useState<ParkingSpot | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Memoize filtered spots to prevent unnecessary re-renders
+  const memoizedFilteredSpots = useMemo(() => filteredSpots, [filteredSpots]);
+
   useEffect(() => {
-    if (!loading && filteredSpots.length > 0) {
-      setVisibleSpots(filteredSpots);
+    if (!loading && memoizedFilteredSpots.length > 0) {
+      setVisibleSpots(memoizedFilteredSpots);
     }
-  }, [filteredSpots, loading]);
-  const handleBoundsChange = (bounds: L.LatLngBounds) => {
-    if (mode === "browse") {
-      setVisibleSpots(
-        filteredSpots.filter((spot) => bounds.contains([spot.lat, spot.lng]))
-      );
-    } else if (mode === "searching" && searchLocation) {
-      const filtered = filteredSpots
-        .filter((spot) => bounds.contains([spot.lat, spot.lng]))
-        .filter(
-          (spot) =>
-            Math.abs(spot.lat - searchLocation.lat) < 0.003 &&
-            Math.abs(spot.lng - searchLocation.lng) < 0.003
+  }, [memoizedFilteredSpots, loading]);
+
+  // Optimized bounds change handler with debouncing
+  const handleBoundsChange = useCallback(
+    (bounds: L.LatLngBounds) => {
+      // Use requestAnimationFrame to debounce map updates
+      requestAnimationFrame(() => {
+        const spotsInBounds = memoizedFilteredSpots.filter((spot) =>
+          bounds.contains([spot.lat, spot.lng])
         );
-      setVisibleSpots(filtered);
-    }
-  };
-  const handleSearch = (location: { lat: number; lng: number }) => {
-    setSearchLocation(location);
-    setMode("searching");
-    setHasSearched(true);
-    const filtered = filteredSpots.filter(
-      (spot) =>
-        Math.abs(spot.lat - location.lat) < 0.003 &&
-        Math.abs(spot.lng - location.lng) < 0.003
-    );
-    setVisibleSpots(filtered);
-  };
-  const handleSelectSpot = (spotId: string) => {
-    const spot = filteredSpots.find((s) => s.id === spotId);
-    if (!spot) return;
+        setVisibleSpots(spotsInBounds);
+      });
+    },
+    [memoizedFilteredSpots]
+  );
+
+  // Optimized search handler
+  const handleSearch = useCallback(
+    (location: { lat: number; lng: number }) => {
+      setSearchLocation(location);
+      setMode("searching");
+      setHasSearched(true);
+
+      // Filter spots near search location efficiently
+      const nearbySpots = memoizedFilteredSpots.filter(
+        (spot) =>
+          Math.abs(spot.lat - location.lat) < 0.003 &&
+          Math.abs(spot.lng - location.lng) < 0.003
+      );
+      setVisibleSpots(nearbySpots);
+    },
+    [memoizedFilteredSpots, setSearchLocation]
+  );
+
+  // Optimized spot selection - no map movement, just highlight
+  const handleSelectSpot = useCallback((spotId: string) => {
     setSelectedSpotId(spotId);
-    setSearchLocation({ lat: spot.lat, lng: spot.lng });
-    setMode("spotSelected");
-    setActiveSpot(spot);
-  };
-  const handleViewOnMap = (spotId: string) => {
-    const spot = filteredSpots.find((s) => s.id === spotId);
-    if (!spot) return;
-    setSelectedSpotId(spotId);
-    setSearchLocation({ lat: spot.lat, lng: spot.lng });
-    setMode("spotSelected");
-  };
-  const handleCloseSpotModal = () => {
-    setActiveSpot(null);
-  };
-  const handleCloseOverlay = () => {
+    // Don't trigger map movement for faster selection
+  }, []);
+
+  // Optimized view on map - only move map when explicitly requested
+  const handleViewOnMap = useCallback(
+    (spotId: string) => {
+      const spot = memoizedFilteredSpots.find((s) => s.id === spotId);
+      if (!spot) return;
+
+      // Batch state updates to prevent multiple re-renders
+      setSelectedSpotId(spotId);
+
+      // Use setTimeout to debounce map movement
+      setTimeout(() => {
+        setSearchLocation({ lat: spot.lat, lng: spot.lng });
+      }, 100);
+
+      setMode("spotSelected");
+    },
+    [memoizedFilteredSpots, setSearchLocation]
+  );
+
+  // Optimized map click handler
+  const handleSpotClickOnMap = useCallback(
+    (spot: ParkingSpot) => {
+      // Fast selection without immediate map movement
+      setSelectedSpotId(spot.id);
+
+      // Auto-open search overlay if not already open
+      if (!showSearchOverlay) {
+        setShowSearchOverlay(true);
+        setMode("searching");
+        setHasSearched(true);
+
+        // Debounce the search location update
+        setTimeout(() => {
+          setSearchLocation({ lat: spot.lat, lng: spot.lng });
+        }, 50);
+      }
+    },
+    [showSearchOverlay, setSearchLocation]
+  );
+
+  const handleCloseOverlay = useCallback(() => {
     setShowSearchOverlay(false);
     setMode("browse");
     setHasSearched(false);
-    setVisibleSpots(filteredSpots);
-  };
-  const handleOpenSearch = () => {
+    setSelectedSpotId(null);
+    setVisibleSpots(memoizedFilteredSpots);
+  }, [memoizedFilteredSpots]);
+
+  const handleOpenSearch = useCallback(() => {
     setShowSearchOverlay(true);
     setMode("searching");
     setHasSearched(false);
-  };
+  }, []);
+
   if (loading) {
     return (
       <Box sx={styles.container}>
@@ -116,6 +160,7 @@ export default function MapScreen() {
       </Box>
     );
   }
+
   if (error) {
     return (
       <Box sx={styles.container}>
@@ -148,161 +193,68 @@ export default function MapScreen() {
       </Box>
     );
   }
+
   return (
     <Box sx={styles.container}>
-      {}
+      {/* Map Section - Always show all visible spots */}
       <Box sx={styles.mapSection}>
         <ParkingMap
-          spots={
-            mode === "spotSelected" && selectedSpotId
-              ? filteredSpots.filter((s) => s.id === selectedSpotId)
-              : visibleSpots
-          }
+          spots={visibleSpots}
           onBoundsChange={handleBoundsChange}
-          onSpotClick={(spot) => handleViewOnMap(spot.id)}
+          onSpotClick={handleSpotClickOnMap}
           searchLocation={searchLocation}
+          selectedSpotId={selectedSpotId}
         />
       </Box>
-      {}
-      <Box sx={styles.heroSection}>
-        {!showSearchOverlay && <HeroSection />}
-        <Fab color="primary" onClick={handleOpenSearch} sx={styles.fab}>
-          <SearchIcon />
-        </Fab>
-        {}
-        <Slide direction="up" in={showSearchOverlay} mountOnEnter unmountOnExit>
-          <Paper sx={styles.overlay} elevation={4}>
-            <IconButton onClick={handleCloseOverlay} sx={styles.closeButton}>
-              <CloseIcon />
-            </IconButton>
-            {}
-            <Box sx={{ mb: 2 }}>
-              <LocationSearchBar
-                onSelectLocation={handleSearch}
-                value=""
-                onClear={() => {}}
-              />
-            </Box>
-            {}
-            {hasSearched ? (
-              <ParkingResultsList
-                spots={visibleSpots}
-                selectedSpotId={selectedSpotId}
-                onSelectSpot={handleSelectSpot}
-                onViewOnMap={handleViewOnMap}
-              />
-            ) : (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  height: "200px",
-                  color: "text.secondary",
-                }}
-              >
-                <Typography variant="body2">
-                  Search for a location to see parking spots
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Slide>
-      </Box>
-      {}
-      {activeSpot && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            zIndex: 1300,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-          onClick={handleCloseSpotModal}
-        >
-          <Box
-            sx={{
-              width: { xs: "90%", sm: "400px" },
-              maxHeight: "80vh",
-              backgroundColor: "white",
-              borderRadius: 2,
-              boxShadow: 24,
-              p: 3,
-              display: "flex",
-              flexDirection: "column",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
+
+      {/* Hero Section */}
+      <Box
+        sx={{
+          ...styles.heroSection,
+          // Add class for mobile overlay state
+          ...(isMobile &&
+            showSearchOverlay && {
+              // On mobile, when search is open, hero section becomes full overlay
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1300,
+              backgroundColor: "transparent",
+            }),
+        }}
+        className={isMobile && showSearchOverlay ? "search-active" : ""}
+      >
+        {/* Only show hero content when not searching on mobile */}
+        {(!isMobile || !showSearchOverlay) && <HeroSection />}
+
+        {/* Search FAB - hide when overlay is open on mobile */}
+        {(!showSearchOverlay || !isMobile) && (
+          <Fab
+            color="primary"
+            onClick={handleOpenSearch}
+            sx={styles.fab}
+            aria-label="Open search"
           >
-            <IconButton
-              onClick={handleCloseSpotModal}
-              sx={{ alignSelf: "flex-end", mb: 1 }}
-            >
-              <CloseIcon />
-            </IconButton>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Parking Spot Details
-            </Typography>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}
-            >
-              <Typography variant="body2">
-                <strong>ID:</strong> {activeSpot.id}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Status:</strong> {activeSpot.status}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Zone:</strong> {activeSpot.zone || "N/A"}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Last Updated:</strong>{" "}
-                {activeSpot.lastUpdated
-                  ? new Date(activeSpot.lastUpdated).toLocaleString()
-                  : "Unknown"}
-              </Typography>
-              {activeSpot.days && (
-                <Typography variant="body2">
-                  <strong>Days:</strong> {activeSpot.days}
-                </Typography>
-              )}
-              {activeSpot.startTime && activeSpot.endTime && (
-                <Typography variant="body2">
-                  <strong>Hours:</strong> {activeSpot.startTime} -{" "}
-                  {activeSpot.endTime}
-                </Typography>
-              )}
-              {activeSpot.rule && (
-                <Typography variant="body2">
-                  <strong>Rule:</strong> {activeSpot.rule}
-                </Typography>
-              )}
-            </Box>
-            <Fab
-              color="primary"
-              variant="extended"
-              sx={{
-                width: "100%",
-                borderRadius: 28,
-              }}
-              onClick={() => {
-                const { lat, lng } = activeSpot;
-                window.open(
-                  `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-                );
-              }}
-            >
-              Get Directions
-            </Fab>
-          </Box>
-        </Box>
-      )}
+            <SearchIcon />
+          </Fab>
+        )}
+
+        {/* Search Overlay */}
+        <SearchOverlay
+          show={showSearchOverlay}
+          visibleSpots={hasSearched ? visibleSpots : []}
+          selectedSpotId={selectedSpotId}
+          onClose={handleCloseOverlay}
+          onSearch={handleSearch}
+          onSelectSpot={handleSelectSpot}
+          onViewOnMap={handleViewOnMap}
+          searchLocation={searchLocation}
+          overlayStyles={styles.overlay}
+          closeButtonStyles={styles.closeButton}
+        />
+      </Box>
     </Box>
   );
 }
