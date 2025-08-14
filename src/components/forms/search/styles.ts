@@ -21,5 +21,4 @@ const searchBarStyles = {
     whiteSpace: "nowrap",
   },
 };
-
 export default searchBarStyles;

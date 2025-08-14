@@ -1,16 +1,9 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { appRoutes } from "./routes";
-
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/map" />} />
         {appRoutes.map(({ path, element, layout: Layout }) => (
           <Route
             key={path}
@@ -22,5 +15,4 @@ function App() {
     </Router>
   );
 }
-
 export default App;

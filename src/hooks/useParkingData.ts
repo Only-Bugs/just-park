@@ -1,29 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { ParkingSpot } from "../types/parking";
-
+import { fetchParkingSpots, ParkingApiError } from "../services/parkingService";
 export const useParkingData = () => {
   const [data, setData] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const res = await fetch("/db.json");
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const parsed: ParkingSpot[] = await res.json();
-        setData(parsed);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const parsed = await fetchParkingSpots();
+      setData(parsed);
+    } catch (err) {
+      if (err instanceof ParkingApiError) {
+        setError(err.message);
+      } else {
+        setError("Failed to load parking data. Please try again.");
       }
-    };
-
-    loadData();
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
-
-  return { data, loading, error };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+  return { data, loading, error, refresh: loadData };
 };

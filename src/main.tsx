@@ -1,12 +1,9 @@
-// src/main.tsx
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./utils/fixLeafletIcons";
 import App from "./App.tsx";
 import "./index.css";
-
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-
 const theme = createTheme({
   palette: {
     mode: "light",
@@ -15,7 +12,6 @@ const theme = createTheme({
     },
   },
 });
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>

@@ -1,12 +1,9 @@
-// src/components/map/ParkingDetailsDrawer.tsx
 import { Box, Button, Typography } from "@mui/material";
 import type { ParkingSpot } from "../../types/parking";
-
 type Props = {
   spot: ParkingSpot;
   onClose: () => void;
 };
-
 export default function ParkingDetailsDrawer({ spot, onClose }: Props) {
   return (
     <Box
@@ -34,7 +31,6 @@ export default function ParkingDetailsDrawer({ spot, onClose }: Props) {
           Close
         </Button>
       </Box>
-
       {Object.entries(spot).map(([key, value]) => (
         <Box key={key} display="flex" mb={1}>
           <Typography

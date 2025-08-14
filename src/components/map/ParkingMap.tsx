@@ -1,35 +1,161 @@
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { CircularProgress, Typography } from "@mui/material";
 import L from "leaflet";
+import { CircularProgress } from "@mui/material";
+import type { ParkingSpot } from "../../types/parking";
+import { createPopupContent, leafletPopupCSS } from "./styles/popupStyles";
 
-import { useParkingData } from "../../hooks/useParkingData";
-import { getMarkerColor } from "../../utils/parkingUtils";
-import type { ParkingMapProps } from "../../types/maps";
+interface Props {
+  spots: ParkingSpot[];
+  onBoundsChange: (bounds: L.LatLngBounds) => void;
+  onSpotClick: (spot: ParkingSpot) => void;
+  searchLocation?: { lat: number; lng: number } | null;
+  selectedSpotId?: string | null;
+}
 
-export default function ParkingMap(props: ParkingMapProps) {
+// Enhanced marker creation function
+const createEnhancedMarker = (
+  spot: ParkingSpot,
+  isSelected: boolean = false
+) => {
+  const isAvailable = spot.status === "Unoccupied";
+  const size = isSelected ? 20 : 16;
+  const borderSize = isSelected ? 3 : 2;
+
+  // Enhanced colors with better contrast
+  const backgroundColor = isAvailable ? "#22c55e" : "#ef4444";
+  const borderColor = isSelected ? "#1f2937" : "#ffffff";
+  const shadowColor = isSelected ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.2)";
+
+  return L.divIcon({
+    className: "custom-parking-marker",
+    html: `
+      <div style="
+        position: relative;
+        width: ${size}px;
+        height: ${size}px;
+        background: ${backgroundColor};
+        border: ${borderSize}px solid ${borderColor};
+        border-radius: 50%;
+        box-shadow: 0 2px 8px ${shadowColor};
+        transform: translate(-50%, -50%);
+        transition: all 0.2s ease;
+        cursor: pointer;
+      ">
+        <div style="
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: ${size - 8}px;
+          height: ${size - 8}px;
+          background: ${isAvailable ? "#16a34a" : "#dc2626"};
+          border-radius: 50%;
+          ${
+            isSelected
+              ? `
+            animation: pulse 1.5s infinite;
+          `
+              : ""
+          }
+        "></div>
+        ${
+          isSelected
+            ? `
+          <div style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: ${size + 10}px;
+            height: ${size + 10}px;
+            border: 2px solid ${backgroundColor};
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: ripple 2s infinite;
+          "></div>
+        `
+            : ""
+        }
+      </div>
+      <style>
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+        @keyframes ripple {
+          0% { 
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.8;
+          }
+          100% { 
+            transform: translate(-50%, -50%) scale(1.8);
+            opacity: 0;
+          }
+        }
+        .custom-parking-marker:hover div:first-child {
+          transform: translate(-50%, -50%) scale(1.2);
+        }
+      </style>
+    `,
+    iconSize: [size + 10, size + 10],
+    iconAnchor: [(size + 10) / 2, (size + 10) / 2],
+  });
+};
+
+export default function ParkingMap({
+  spots,
+  onBoundsChange,
+  onSpotClick,
+  searchLocation,
+  selectedSpotId,
+}: Props) {
   const center: [number, number] = [-37.8136, 144.9631];
 
   return (
-    <MapContainer
-      center={center}
-      zoom={15}
-      style={{ height: "100%", width: "100%" }}
-    >
-      <InnerMap {...props} />
-    </MapContainer>
+    <>
+      {/* Custom CSS for Leaflet popup styling */}
+      <style>{leafletPopupCSS}</style>
+
+      <MapContainer
+        center={center}
+        zoom={15}
+        style={{ height: "100%", width: "100%" }}
+      >
+        <InnerMap
+          spots={spots}
+          onBoundsChange={onBoundsChange}
+          onSpotClick={onSpotClick}
+          searchLocation={searchLocation}
+          selectedSpotId={selectedSpotId}
+        />
+      </MapContainer>
+    </>
   );
 }
 
-// 🔽 Inner map component to safely use useMap()
 function InnerMap({
-  onSelectSpot,
-  showAvailableOnly,
+  spots,
+  onBoundsChange,
+  onSpotClick,
   searchLocation,
-}: ParkingMapProps) {
+  selectedSpotId,
+}: {
+  spots: ParkingSpot[];
+  onBoundsChange: (bounds: L.LatLngBounds) => void;
+  onSpotClick: (spot: ParkingSpot) => void;
+  searchLocation?: { lat: number; lng: number } | null;
+  selectedSpotId?: string | null;
+}) {
   const map = useMap();
-  const { data, loading, error } = useParkingData();
 
   useEffect(() => {
     if (searchLocation) {
@@ -39,12 +165,14 @@ function InnerMap({
     }
   }, [searchLocation, map]);
 
-  if (loading) return <CircularProgress />;
-  if (error) return <Typography color="error">Error: {error}</Typography>;
+  useMapEvents({
+    moveend: () => {
+      const bounds = map.getBounds();
+      onBoundsChange(bounds);
+    },
+  });
 
-  const filtered = showAvailableOnly
-    ? data.filter((spot) => spot.status === "Unoccupied")
-    : data;
+  if (!spots) return <CircularProgress />;
 
   return (
     <>
@@ -52,40 +180,35 @@ function InnerMap({
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      {spots.map((spot) => {
+        const isSelected = selectedSpotId === spot.id;
 
-      {filtered.map((spot) => (
-        <Marker
-          key={spot.id}
-          position={[spot.lat, spot.lng]}
-          icon={L.divIcon({
-            className: "custom-icon",
-            html: `<div style="background:${getMarkerColor(
-              spot.status
-            )};width:10px;height:10px;border-radius:50%"></div>`,
-            iconSize: [10, 10],
-            iconAnchor: [5, 5],
-          })}
-        >
-          <Popup>
-            <strong>Status:</strong> {spot.status} <br />
-            <strong>Zone:</strong> {spot.zone || "N/A"} <br />
-            <button
-              onClick={() => onSelectSpot(spot)}
-              style={{
-                marginTop: "5px",
-                background: "none",
-                border: "none",
-                color: "#007BFF",
-                textDecoration: "none",
-                cursor: "pointer",
-                padding: 0,
-              }}
+        return (
+          <Marker
+            key={spot.id}
+            position={[spot.lat, spot.lng]}
+            icon={createEnhancedMarker(spot, isSelected)}
+            eventHandlers={{
+              click: () => onSpotClick(spot),
+            }}
+          >
+            <Popup
+              className="custom-popup"
+              closeButton={true}
+              autoClose={false}
+              closeOnEscapeKey={true}
+              autoPan={true} // Automatically pan map to keep popup in view
+              autoPanPadding={[20, 20]} // Padding around popup when auto-panning
+              keepInView={true} // Keep popup in view when map bounds change
+              offset={[0, -20]} // This pushes the popup up so it doesn't hide the marker
             >
-              More Info
-            </button>
-          </Popup>
-        </Marker>
-      ))}
+              <div
+                dangerouslySetInnerHTML={{ __html: createPopupContent(spot) }}
+              />
+            </Popup>
+          </Marker>
+        );
+      })}
     </>
   );
 }

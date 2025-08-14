@@ -38,5 +38,4 @@ export const theme = {
     xl: '1280px',
   },
 };
-
 export type Theme = typeof theme;

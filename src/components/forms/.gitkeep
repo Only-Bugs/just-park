@@ -1,0 +1,66 @@
+// src/components/map/SearchOverlay.tsx
+import { useState } from "react";
+import { Box, Paper, IconButton, Slide } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import LocationSearchBar from "../forms/search/LocationSearchBar";
+import ParkingResultsList from "./ParkingResultsList";
+import type { ParkingSpot } from "../../types/parking";
+
+interface SearchOverlayProps {
+  show: boolean;
+  visibleSpots: ParkingSpot[];
+  selectedSpotId: string | null;
+  onClose: () => void;
+  onSearch: (location: { lat: number, lng: number }) => void;
+  onSelectSpot: (spotId: string) => void;
+  overlayStyles: any;
+  closeButtonStyles: any;
+}
+
+export default function SearchOverlay({
+  show,
+  visibleSpots,
+  selectedSpotId,
+  onClose,
+  onSearch,
+  onSelectSpot,
+  overlayStyles,
+  closeButtonStyles,
+}: SearchOverlayProps) {
+  const [searchValue, setSearchValue] = useState("");
+
+  const handleClose = () => {
+    setSearchValue(""); // Clear search input
+    onClose();
+  };
+
+  const handleClearSearch = () => {
+    setSearchValue("");
+  };
+
+  return (
+    <Slide direction="up" in={show} mountOnEnter unmountOnExit>
+      <Paper sx={overlayStyles} elevation={4}>
+        <IconButton onClick={handleClose} sx={closeButtonStyles}>
+          <CloseIcon />
+        </IconButton>
+
+        {/* Search bar */}
+        <Box sx={{ mb: 2 }}>
+          <LocationSearchBar
+            onSelectLocation={onSearch}
+            value={searchValue}
+            onClear={handleClearSearch}
+          />
+        </Box>
+
+        {/* Results list */}
+        <ParkingResultsList
+          spots={visibleSpots}
+          selectedSpotId={selectedSpotId}
+          onSelectSpot={onSelectSpot}
+        />
+      </Paper>
+    </Slide>
+  );
+}

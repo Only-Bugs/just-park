@@ -7,7 +7,6 @@ export default {
     borderTop: "1px solid #ddd",
     px: 3,
   },
-
   copy: {
     textAlign: "center",
     color: "#999",
