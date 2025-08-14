@@ -1,6 +1,6 @@
 // src/components/map/DetailedParkingCard.tsx
 import { useState, useCallback } from "react";
-import { Box, Typography, Card, IconButton, Fab } from "@mui/material";
+import { Box, Typography, Card, IconButton, Fab, Chip } from "@mui/material";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import DirectionsWalkIcon from "@mui/icons-material/DirectionsWalk";
 import NavigationIcon from "@mui/icons-material/Navigation";
@@ -16,6 +16,7 @@ import { getWalkingTime } from "../../utils/distanceUtils";
 import StatusChip from "./StatusChip";
 import { sharedCardStyles, colors } from "./styles/parkingCardStyles";
 import { detailedCardStyles } from "./styles/detailedCardStyles";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 interface DetailedParkingCardProps {
   spot: ParkingSpot & {
@@ -26,6 +27,7 @@ interface DetailedParkingCardProps {
   isSelected: boolean;
   isClosestSpot: boolean;
   showDistance: boolean;
+  isEconomicalSpot: boolean;
   onCardClick: (spotId: string) => void;
   onDirections: (spot: ParkingSpot) => void;
 }
@@ -37,6 +39,7 @@ export default function DetailedParkingCard({
   showDistance,
   onCardClick,
   onDirections,
+  isEconomicalSpot,
 }: DetailedParkingCardProps) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -64,7 +67,7 @@ export default function DetailedParkingCard({
     setShowDetails((prev) => !prev);
   }, []);
 
-  const getCardStyles = () => ({
+  const cardStyles = {
     ...sharedCardStyles.baseCard,
     ...detailedCardStyles.card,
     ...(isSelected
@@ -73,30 +76,50 @@ export default function DetailedParkingCard({
     ...(isAvailable
       ? sharedCardStyles.availableSpot
       : sharedCardStyles.occupiedSpot),
-  });
+  } as SxProps<Theme>;
 
-  const getParkingSignStyles = () => ({
+  const parkingSignStyles = {
     ...sharedCardStyles.parkingSign,
     ...detailedCardStyles.parkingSign,
     ...(primaryRestriction
       ? sharedCardStyles.parkingSignWithRestrictions
       : sharedCardStyles.parkingSignNoRestrictions),
-  });
+  } as SxProps<Theme>;
+
+  const availabilityDotStyles = {
+    ...sharedCardStyles.availabilityDot,
+    ...detailedCardStyles.availabilityDot,
+    bgcolor: isAvailable ? colors.available : colors.occupied,
+  } as SxProps<Theme>;
+
+  const expandButtonStyles = {
+    ...sharedCardStyles.expandButton,
+    ...detailedCardStyles.expandButton,
+  } as SxProps<Theme>;
+
+  const directionsButtonStyles = {
+    ...sharedCardStyles.directionsButton,
+    ...detailedCardStyles.directionsButton,
+  } as SxProps<Theme>;
+
+  const expandableDetailsStyles = {
+    ...sharedCardStyles.expandableDetails,
+    ...detailedCardStyles.expandableDetails,
+  } as SxProps<Theme>;
+
+  const restrictionItemStyles = {
+    ...sharedCardStyles.restrictionItem,
+    ...detailedCardStyles.restrictionItem,
+  } as SxProps<Theme>;
 
   return (
-    <Card onClick={handleCardClick} sx={getCardStyles()}>
+    <Card onClick={handleCardClick} sx={cardStyles}>
       {/* Availability indicator */}
-      <Box
-        sx={{
-          ...sharedCardStyles.availabilityDot,
-          ...detailedCardStyles.availabilityDot,
-          bgcolor: isAvailable ? colors.available : colors.occupied,
-        }}
-      />
+      <Box sx={availabilityDotStyles} />
 
       <Box sx={detailedCardStyles.container}>
         {/* Left: Parking Sign */}
-        <Box sx={getParkingSignStyles()}>
+        <Box sx={parkingSignStyles}>
           {primaryRestriction ? (
             <>
               <Typography variant="h3" sx={detailedCardStyles.parkingSignText}>
@@ -141,13 +164,7 @@ export default function DetailedParkingCard({
 
           {/* Expandable arrow - only show if multiple restrictions */}
           {spot.restrictions && spot.restrictions.length > 1 && (
-            <IconButton
-              onClick={handleDetailsToggle}
-              sx={{
-                ...sharedCardStyles.expandButton,
-                ...detailedCardStyles.expandButton,
-              }}
-            >
+            <IconButton onClick={handleDetailsToggle} sx={expandButtonStyles}>
               <ExpandMoreIcon
                 sx={{
                   fontSize: 18,
@@ -190,7 +207,7 @@ export default function DetailedParkingCard({
                   color="text.secondary"
                   sx={detailedCardStyles.walkingTimeText}
                 >
-                  {getWalkingTime(spot.distance)} walk
+                  {getWalkingTime(spot.distance)}
                 </Typography>
               </Box>
 
@@ -203,6 +220,25 @@ export default function DetailedParkingCard({
                   <StatusChip
                     variant="closest"
                     sx={detailedCardStyles.closestChip}
+                  />
+                )}
+                {isEconomicalSpot && (
+                  <Chip
+                    label="Economical"
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: isClosestSpot ? 45 : 12,
+                      right: 12,
+                      bgcolor: "#22c55e",
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: "0.7rem",
+                      height: 22,
+                      px: 1,
+                      zIndex: 10,
+                      boxShadow: "0 2px 8px rgba(34, 197, 94, 0.3)",
+                    }}
                   />
                 )}
 
@@ -225,10 +261,7 @@ export default function DetailedParkingCard({
             color="primary"
             variant="extended"
             onClick={handleDirectionsClick}
-            sx={{
-              ...sharedCardStyles.directionsButton,
-              ...detailedCardStyles.directionsButton,
-            }}
+            sx={directionsButtonStyles}
           >
             <NavigationIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
           </Fab>
@@ -237,12 +270,7 @@ export default function DetailedParkingCard({
 
       {/* Expandable Details */}
       {showDetails && spot.restrictions && spot.restrictions.length > 1 && (
-        <Box
-          sx={{
-            ...sharedCardStyles.expandableDetails,
-            ...detailedCardStyles.expandableDetails,
-          }}
-        >
+        <Box sx={expandableDetailsStyles}>
           <Typography
             variant="subtitle2"
             sx={detailedCardStyles.expandableTitle}
@@ -251,13 +279,7 @@ export default function DetailedParkingCard({
           </Typography>
           <Box sx={detailedCardStyles.restrictionsList}>
             {spot.restrictions.map((restriction, idx) => (
-              <Box
-                key={idx}
-                sx={{
-                  ...sharedCardStyles.restrictionItem,
-                  ...detailedCardStyles.restrictionItem,
-                }}
-              >
+              <Box key={idx} sx={restrictionItemStyles}>
                 <Typography
                   variant="body2"
                   sx={detailedCardStyles.restrictionTitle}

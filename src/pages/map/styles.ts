@@ -79,26 +79,26 @@ const styles: Record<string, SxProps<Theme>> = {
     backdropFilter: "blur(10px)",
     border: "1px solid rgba(255,255,255,0.2)",
     boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-
-    // Mobile styles - full screen
-    [(theme) => theme.breakpoints.down("md")]: {
-      inset: 0,
-      borderRadius: 0,
-      p: 2,
-    },
-
-    // Tablet styles - with margins
-    [(theme) => theme.breakpoints.between("md", "lg")]: {
-      inset: 8,
-      borderRadius: 2,
-      p: 2.5,
-    },
-
-    // Desktop styles - original
-    [(theme) => theme.breakpoints.up("lg")]: {
-      inset: 0,
-      borderRadius: 3,
-      p: 3,
+    // Use standard responsive design instead of computed properties
+    ...{
+      // Mobile styles - full screen
+      "@media (max-width: 768px)": {
+        inset: 0,
+        borderRadius: 0,
+        p: 2,
+      },
+      // Tablet styles - with margins
+      "@media (min-width: 769px) and (max-width: 1024px)": {
+        inset: 8,
+        borderRadius: 2,
+        p: 2.5,
+      },
+      // Desktop styles - original
+      "@media (min-width: 1025px)": {
+        inset: 0,
+        borderRadius: 3,
+        p: 3,
+      },
     },
   },
 

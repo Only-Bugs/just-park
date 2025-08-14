@@ -11,13 +11,14 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { CircularProgress } from "@mui/material";
 import type { ParkingSpot } from "../../types/parking";
+import { createPopupContent, leafletPopupCSS } from "./styles/popupStyles";
 
 interface Props {
   spots: ParkingSpot[];
   onBoundsChange: (bounds: L.LatLngBounds) => void;
   onSpotClick: (spot: ParkingSpot) => void;
   searchLocation?: { lat: number; lng: number } | null;
-  selectedSpotId?: string | null; // Add selected spot ID
+  selectedSpotId?: string | null;
 }
 
 // Enhanced marker creation function
@@ -120,19 +121,24 @@ export default function ParkingMap({
   const center: [number, number] = [-37.8136, 144.9631];
 
   return (
-    <MapContainer
-      center={center}
-      zoom={15}
-      style={{ height: "100%", width: "100%" }}
-    >
-      <InnerMap
-        spots={spots}
-        onBoundsChange={onBoundsChange}
-        onSpotClick={onSpotClick}
-        searchLocation={searchLocation}
-        selectedSpotId={selectedSpotId}
-      />
-    </MapContainer>
+    <>
+      {/* Custom CSS for Leaflet popup styling */}
+      <style>{leafletPopupCSS}</style>
+
+      <MapContainer
+        center={center}
+        zoom={15}
+        style={{ height: "100%", width: "100%" }}
+      >
+        <InnerMap
+          spots={spots}
+          onBoundsChange={onBoundsChange}
+          onSpotClick={onSpotClick}
+          searchLocation={searchLocation}
+          selectedSpotId={selectedSpotId}
+        />
+      </MapContainer>
+    </>
   );
 }
 
@@ -186,68 +192,19 @@ function InnerMap({
               click: () => onSpotClick(spot),
             }}
           >
-            <Popup>
-              <div style={{ textAlign: "center", minWidth: "150px" }}>
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      display: "inline-block",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      backgroundColor:
-                        spot.status === "Unoccupied" ? "#dcfce7" : "#fee2e2",
-                      color:
-                        spot.status === "Unoccupied" ? "#166534" : "#991b1b",
-                      fontWeight: "600",
-                      fontSize: "12px",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    {spot.status}
-                  </div>
-                  <br />
-                  <strong>Zone:</strong> {spot.zone || "N/A"}
-                  {spot.primaryRule && (
-                    <>
-                      <br />
-                      <span style={{ fontSize: "11px", color: "#666" }}>
-                        {spot.primaryRule}
-                      </span>
-                    </>
-                  )}
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open(
-                      `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`,
-                      "_blank"
-                    );
-                  }}
-                  style={{
-                    backgroundColor: "#1976d2",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    padding: "10px 16px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    width: "100%",
-                    transition: "background-color 0.2s ease",
-                  }}
-                  onMouseOver={(e) => {
-                    (e.target as HTMLButtonElement).style.backgroundColor =
-                      "#1565c0";
-                  }}
-                  onMouseOut={(e) => {
-                    (e.target as HTMLButtonElement).style.backgroundColor =
-                      "#1976d2";
-                  }}
-                >
-                  Get Directions
-                </button>
-              </div>
+            <Popup
+              className="custom-popup"
+              closeButton={true}
+              autoClose={false}
+              closeOnEscapeKey={true}
+              autoPan={true} // Automatically pan map to keep popup in view
+              autoPanPadding={[20, 20]} // Padding around popup when auto-panning
+              keepInView={true} // Keep popup in view when map bounds change
+              offset={[0, -20]} // This pushes the popup up so it doesn't hide the marker
+            >
+              <div
+                dangerouslySetInnerHTML={{ __html: createPopupContent(spot) }}
+              />
             </Popup>
           </Marker>
         );

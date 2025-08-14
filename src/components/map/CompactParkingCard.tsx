@@ -3,12 +3,12 @@ import { useCallback } from "react";
 import { Box, Typography, Card, IconButton } from "@mui/material";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import NavigationIcon from "@mui/icons-material/Navigation";
-import type { ParkingSpot, ParkingRestriction } from "../../types/parking";
+import type { ParkingSpot } from "../../types/parking";
 import { formatDays } from "../../types/parking";
-import { getWalkingTime } from "../../utils/distanceUtils";
 import StatusChip from "./StatusChip";
 import { sharedCardStyles, colors } from "./styles/parkingCardStyles";
 import { compactCardStyles } from "./styles/compactCardStyles";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 interface CompactParkingCardProps {
   spot: ParkingSpot & {
@@ -16,6 +16,7 @@ interface CompactParkingCardProps {
     formattedDistance: string;
     originalIndex: number;
   };
+  isEconomicalSpot: boolean;
   isSelected: boolean;
   isClosestSpot: boolean;
   showDistance: boolean;
@@ -30,6 +31,7 @@ export default function CompactParkingCard({
   showDistance,
   onCardClick,
   onDirections,
+  isEconomicalSpot,
 }: CompactParkingCardProps) {
   const isAvailable = spot.status === "Unoccupied";
   const primaryRestriction = spot.currentRestriction || spot.restrictions?.[0];
@@ -47,7 +49,7 @@ export default function CompactParkingCard({
     [onDirections, spot]
   );
 
-  const getCardStyles = () => ({
+  const cardStyles = {
     ...sharedCardStyles.baseCard,
     ...compactCardStyles.card,
     ...(isSelected
@@ -56,21 +58,52 @@ export default function CompactParkingCard({
     ...(isAvailable
       ? sharedCardStyles.availableSpot
       : sharedCardStyles.occupiedSpot),
-  });
+  } as SxProps<Theme>;
 
-  const getParkingSignStyles = () => ({
+  const parkingSignStyles = {
     ...sharedCardStyles.parkingSign,
     ...compactCardStyles.parkingSign,
     ...(primaryRestriction
       ? sharedCardStyles.parkingSignWithRestrictions
       : sharedCardStyles.parkingSignNoRestrictions),
-  });
+  } as SxProps<Theme>;
+
+  const availabilityDotStyles = {
+    ...sharedCardStyles.availabilityDot,
+    ...compactCardStyles.availabilityDot,
+    bgcolor: isAvailable ? colors.available : colors.occupied,
+  } as SxProps<Theme>;
+
+  const directionsButtonStyles = {
+    ...sharedCardStyles.directionsButton,
+    ...compactCardStyles.directionsButton,
+  } as SxProps<Theme>;
 
   return (
-    <Card onClick={handleCardClick} sx={getCardStyles()}>
+    <Card onClick={handleCardClick} sx={cardStyles}>
       {/* Closest Badge */}
       {isClosestSpot && (
         <StatusChip variant="closest" sx={compactCardStyles.closestChip} />
+      )}
+
+      {isEconomicalSpot && (
+        <StatusChip
+          variant="economical"
+          size="small"
+          sx={{
+            position: "absolute",
+            top: isClosestSpot ? 45 : 12,
+            right: 12,
+            bgcolor: "#22c55e",
+            color: "white",
+            fontWeight: 600,
+            fontSize: "0.7rem",
+            height: 22,
+            px: 1,
+            zIndex: 10,
+            boxShadow: "0 2px 8px rgba(34, 197, 94, 0.3)",
+          }}
+        />
       )}
 
       {/* Economical Badge - show when no restrictions */}
@@ -79,23 +112,17 @@ export default function CompactParkingCard({
           variant="economical"
           sx={{
             ...compactCardStyles.closestChip,
-            top: isClosestSpot ? 40 : 8, // Position below closest chip if both exist
+            top: isClosestSpot ? 40 : 8,
           }}
         />
       )}
 
       {/* Availability indicator */}
-      <Box
-        sx={{
-          ...sharedCardStyles.availabilityDot,
-          ...compactCardStyles.availabilityDot,
-          bgcolor: isAvailable ? colors.available : colors.occupied,
-        }}
-      />
+      <Box sx={availabilityDotStyles} />
 
       <Box sx={compactCardStyles.container}>
         {/* Parking Sign */}
-        <Box sx={getParkingSignStyles()}>
+        <Box sx={parkingSignStyles}>
           {primaryRestriction ? (
             <>
               <Typography variant="h5" sx={compactCardStyles.parkingSignText}>
@@ -107,7 +134,7 @@ export default function CompactParkingCard({
                   ? "30M"
                   : primaryRestriction.Rule?.includes("4P")
                   ? "4P"
-                  : primaryRestriction.Rule?.slice(0, 4) || "N/A"}
+                  : primaryRestriction.Rule?.slice(0, 4) || "No Limits"}
               </Typography>
               <Typography
                 variant="caption"
@@ -128,17 +155,6 @@ export default function CompactParkingCard({
 
         {/* Spot Info */}
         <Box sx={compactCardStyles.spotInfo}>
-          <Typography variant="h6" sx={compactCardStyles.spotTitle}>
-            Spot {spot.id}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={compactCardStyles.spotZone}
-          >
-            Zone: {spot.zone || "N/A"}
-          </Typography>
-
           {showDistance && spot.distance > 0 && (
             <Box sx={compactCardStyles.distanceContainer}>
               <LocationOnIcon sx={{ fontSize: 16, color: colors.primary }} />
@@ -158,10 +174,7 @@ export default function CompactParkingCard({
           <IconButton
             size="medium"
             onClick={handleDirectionsClick}
-            sx={{
-              ...sharedCardStyles.directionsButton,
-              ...compactCardStyles.directionsButton,
-            }}
+            sx={directionsButtonStyles}
           >
             <NavigationIcon sx={{ fontSize: 22 }} />
           </IconButton>

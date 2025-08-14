@@ -64,7 +64,7 @@ export function sortSpotsByDistance(
  */
 export function getWalkingTime(meters: number): string {
   const walkingSpeedKmH = 5;
-  const walkingSpeedMs = (walkingSpeedKmH * 1000) / 3600; // meters per second
+  const walkingSpeedMs = (walkingSpeedKmH * 1000) / 3600;
   const timeInSeconds = meters / walkingSpeedMs;
   const timeInMinutes = Math.round(timeInSeconds / 60);
 
